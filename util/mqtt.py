@@ -2,6 +2,7 @@ from paho.mqtt import client as mqtt_client
 import json
 import time
 
+# class for MQTT operations
 class MQTTClient():
 
     # Connection Settings
@@ -29,50 +30,26 @@ class MQTTClient():
         # client.on_connect = on_connect
         # client.on_disconnect = on_disconnect
         client.connect(self.broker_address, self.port)
-        self.client = client
+        return client
 
-    def disconnect_mqtt(self):
-        self.client.disconnect()
-
-    # publish to a topic
+    # publish a message to a topic
     def publish(self, topic: str, msg: str):
-        msg_count = 0
+        client = self.connect_mqtt()
         print(msg)
-        result = self.client.publish(topic, msg)
+        result = client.publish(topic, msg)
         # result: [0, 1]
         status = result[0]
         if status == 0:
             print(f"Send `{msg}` to topic `{topic}`")
         else:
             print(f"Failed to send message to topic {topic}")
-
-    # subscribes to a topic, with a MQTT Client attaches callback to process received messages
-    def subscribe(self, topic, callback):
-        # callback for messages received via subscribe
-        def on_message(client, userdata, msg):
-            # created_task = app.mongdb["db-test"].find_one(
-            #     {"_id": new_status.inserted_id}
-            # )
-            # # TODO: validate message before inserting to db
-            # new_status = app.mongodb["db-test"].insert_one(created_task)
-            print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-            # signal to calling thread, that message has been received
-
-            return msg
-
-
-        # callback for processing received messages from the subscribed topic 
-        self.client.subscribe(topic)
-        self.client.on_message = on_message
-        # TODO; Figure out loop, right now this command is blocking 
-
-        self.client.loop_start()
+        client.disconnect()
 
     # subscribe and waits 
     def sub_and_wait(self, topic, timeout):
         stop = False
         # connect to mqtt
-        self.connect_mqtt()
+        client = self.connect_mqtt()
         response = None
         def on_message(client, userdata, msg):
             nonlocal stop
@@ -82,19 +59,20 @@ class MQTTClient():
             response = msg
             stop = True
 
-        self.client.subscribe(topic)
-        self.client.on_message = on_message
-        current_time = time.time()
+        client.subscribe(topic)
+        client.on_message = on_message
+        start_time = time.time()
         
+        elapsed_time = 0
         # loop for the alloted time or when message has been received
-        while time.time() - current_time < timeout and not stop:
-            print('looping', time.time() - current_time)
-            self.client.loop()
-        self.client.loop_stop()
-        self.client.unsubscribe(topic)
+        while elapsed_time < timeout and not stop:
+            client.loop()
+            elapsed_time = time.time() - start_time
+        client.loop_stop()
+        client.unsubscribe(topic)
         # disconnect 
-        self.disconnect_mqtt()
+        client.disconnect()
         
-        return response
+        return response, elapsed_time
 
         
