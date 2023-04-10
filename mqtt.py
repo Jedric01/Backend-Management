@@ -1,5 +1,6 @@
 from paho.mqtt import client as mqtt_client
 import json
+import time
 
 class MQTTClient():
 
@@ -25,12 +26,12 @@ class MQTTClient():
         # Set Connecting Client ID
         client = mqtt_client.Client(self.CLIENT_ID)
         # client.username_pw_set(username=, password)
-        client.on_connect = on_connect
-        client.on_disconnect = on_disconnect
+        # client.on_connect = on_connect
+        # client.on_disconnect = on_disconnect
         client.connect(self.broker_address, self.port)
         self.client = client
 
-    def disconnet_mqtt(self):
+    def disconnect_mqtt(self):
         self.client.disconnect()
 
     # publish to a topic
@@ -55,7 +56,8 @@ class MQTTClient():
             # # TODO: validate message before inserting to db
             # new_status = app.mongodb["db-test"].insert_one(created_task)
             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-            client.disconnect()
+            # signal to calling thread, that message has been received
+
             return msg
 
 
@@ -63,4 +65,36 @@ class MQTTClient():
         self.client.subscribe(topic)
         self.client.on_message = on_message
         # TODO; Figure out loop, right now this command is blocking 
-        self.client.loop_forever()
+
+        self.client.loop_start()
+
+    # subscribe and waits 
+    def sub_and_wait(self, topic, timeout):
+        stop = False
+        # connect to mqtt
+        self.connect_mqtt()
+        response = None
+        def on_message(client, userdata, msg):
+            nonlocal stop
+            nonlocal response
+            print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+            response = msg
+            stop = True
+
+        self.client.subscribe(topic)
+        self.client.on_message = on_message
+        current_time = time.time()
+        
+        # loop for the alloted time or when message has been received
+        while time.time() - current_time < timeout and not stop:
+            print('looping', time.time() - current_time)
+            self.client.loop()
+        self.client.loop_stop()
+        self.client.unsubscribe(topic)
+        # disconnect 
+        self.disconnect_mqtt()
+        
+        return response
+
+        
