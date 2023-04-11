@@ -19,7 +19,6 @@ router = APIRouter(prefix=gateway_commands.PREFIX, dependencies=[Depends(gateway
 async def ping(request: Request):
     # publish to mqtt  topic
     mqtt.publish(f'{gateway_commands.PREFIX}/{request.state.eui}', gateway_commands.PING)
-
     #await response from gateway
     try:
         event_loop = asyncio.get_event_loop()
