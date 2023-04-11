@@ -12,9 +12,6 @@ from util.localization_engine import Localization_Engine
 router = APIRouter(prefix='/localization')
 engine = Localization_Engine()
 
-def localize(List[gateway]):
-    pass
-
 @router.get('/distance')
 async def get_radius(rssi: float):
     return engine.rssi_distance(rssi)
@@ -22,6 +19,5 @@ async def get_radius(rssi: float):
 @router.post('/localize')
 async def localize(gateways: List[gateway_localize_model] = Required):
     # TODO: Try to use fewell's localization algorithm
-    for g in gateways:
-        print(g.lattitude)
-    return
+    return engine.localize(gateways)
+    

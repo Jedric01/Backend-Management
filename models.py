@@ -26,6 +26,6 @@ class gateway_out_model():
     payload: Union[data_payload, None] = None
 
 class gateway_localize_model(BaseModel):
-    longitude: float
     lattitude: float
+    longitude: float
     rssi: float

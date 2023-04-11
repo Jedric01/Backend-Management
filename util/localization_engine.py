@@ -1,6 +1,10 @@
 import numpy as np
 import json
+from math import radians, cos, sin, asin, sqrt, atan2, degrees
+from models import gateway_localize_model
+from localization import algos
 
+from typing import List
 
 class Localization_Engine():
     PREFIX_TRAIN_DATA = 'train_data/processed'
@@ -26,4 +30,104 @@ class Localization_Engine():
         radius = (rssi - rssi_data[idx - 1])/slope + distance[idx - 1]
         print(f'interpolating between {distance[idx - 1]} and {distance[idx]}')
         print('radius:', radius)
-        return radius
+        return radius/1000
+    
+
+    def localize(self, gateways: List[gateway_localize_model]):
+        # convert geometric coordinate system to cartesian coordinates
+        gateway_input = []
+
+        # set first gateway as (0, 0)
+        ref_long = gateways[0].longitude
+        ref_lat = gateways[0].lattitude
+        gateway_input.append((0, 0, self.rssi_distance(gateways[0].rssi)))
+        gateways.pop(0)
+
+        for g in gateways:
+            print(g.lattitude, g.longitude)
+            # calculate distance between current gateway and reference/first gateway
+            d = self.distance(ref_lat, g.lattitude, ref_long, g.longitude)
+            print(d)
+            bearing = radians(self.calc_bearing(ref_lat, ref_long, g.lattitude, g.longitude))
+            # measure relative distance between reference gateway and current gateway in (x, y)
+            x = sin(bearing) * d
+            y = cos(bearing) * d
+            r = self.rssi_distance(g.rssi)
+
+            gateway_input.append((x, y, r))
+
+        print(gateway_input)
+
+        (target_x, target_y) = algos.maximum_likelihood(gateway_input)
+        angle = degrees(atan2(target_x, target_y))
+        distance = sqrt(x**2 + y**2)
+
+        return self.get_point_at_distance(ref_lat, ref_long, distance, angle)
+
+
+    def calc_bearing(self, lat1, long1, lat2, long2):
+        # Convert latitude and longitude to radians
+        lat1 = radians(lat1)
+        long1 = radians(long1)
+        lat2 = radians(lat2)
+        long2 = radians(long2)
+        
+        # Calculate the bearing
+        bearing = atan2(
+            sin(long2 - long1) * cos(lat2),
+            cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(long2 - long1)
+        )
+        
+        # Convert the bearing to degrees
+        bearing = degrees(bearing)
+        
+        # Make sure the bearing is positive
+        bearing = (bearing + 360) % 360
+        
+        return bearing
+    
+
+    def get_point_at_distance(self, lat1, lon1, d, bearing, R=6371):
+        """
+        lat: initial latitude, in degrees
+        lon: initial longitude, in degrees
+        d: target distance from initial
+        bearing: (true) heading in degrees
+        R: optional radius of sphere, defaults to mean radius of earth
+
+        Returns new lat/lon coordinate {d}km from initial, in degrees
+        """
+        lat1 = radians(lat1)
+        lon1 = radians(lon1)
+        a = radians(bearing)
+        lat2 = asin(sin(lat1) * cos(d/R) + cos(lat1) * sin(d/R) * cos(a))
+        lon2 = lon1 + atan2(
+            sin(a) * sin(d/R) * cos(lat1),
+            cos(d/R) - sin(lat1) * sin(lat2)
+        )
+        return (degrees(lat2), degrees(lon2),)
+
+    
+
+    # Python 3 program to calculate Distance Between Two Points on Earth
+    
+    def distance(self, lat1, lat2, lon1, lon2):
+        # The math module contains a function named
+        # radians which converts from degrees to radians.
+        lon1 = radians(lon1)
+        lon2 = radians(lon2)
+        lat1 = radians(lat1)
+        lat2 = radians(lat2)
+        
+        # Haversine formula
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    
+        c = 2 * asin(sqrt(a))
+        
+        # Radius of earth in kilometers. Use 3956 for miles
+        r = 6371
+        
+        # calculate the result
+        return(c * r)
