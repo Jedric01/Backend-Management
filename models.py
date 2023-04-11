@@ -25,4 +25,7 @@ class gateway_out_model():
     exception: Union[str, None] = None
     payload: Union[data_payload, None] = None
 
-
+class gateway_localize_model(BaseModel):
+    longitude: float
+    lattitude: float
+    rssi: float
