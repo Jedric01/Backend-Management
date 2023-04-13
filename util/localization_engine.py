@@ -6,16 +6,25 @@ from localization import algos
 
 from typing import List
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
 class Localization_Engine():
     PREFIX_TRAIN_DATA = 'train_data/processed'
     train_data = {}
 
     def __init__(self) -> None:
+        self.reloaded = tf.keras.models.load_model('model/rssi_to_distance')
         with open(f'{self.PREFIX_TRAIN_DATA}/t8_tx10.json', 'r') as f1, open(f'{self.PREFIX_TRAIN_DATA}/t20_tx10.json') as f2, open(f'{self.PREFIX_TRAIN_DATA}/t8_tx15.json', 'r') as f3:
             data_str = json.load(f1)
             data = json.loads(data_str)
             self.train_data['rssi'] = data['rssi']
             self.train_data['distance'] = data['distance']
+            print(len(self.train_data['rssi']))
 
     # convert rssi to distance/radius, by linear interpolating training data
     # def rssi_distance(self, rssi: float, tx_power: int = 10):
@@ -38,7 +47,10 @@ class Localization_Engine():
     def rssi_to_distance(self, rssi, i = 0):
         dist = 10 ** ((self.A[i] - rssi) / (10 * self.n[i]))
         return dist
-    
+
+    def calculate_rssi_to_distance(self, payload: dict):
+        data = pd.DataFrame(payload, index=[0])
+        print(self.reloaded.predict(data)[0][0])
 
     def localize(self, gateways: List[gateway_localize_model]):
         # convert geometric coordinate system to cartesian coordinates

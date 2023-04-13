@@ -137,4 +137,3 @@ with open(path_processed+'/t8_tx10.json', 'w') as f:
     json.dump(rssi_2_json, f)
 with open(path_processed+'/t8_tx15.json', 'w') as f:
     json.dump(rssi_3_json, f)
-
