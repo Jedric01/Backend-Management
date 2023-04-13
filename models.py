@@ -16,6 +16,7 @@ class gateway_commands:
 class data_payload():
     temp: Union[float, None] = None
     uptime: Union[float, None] = None
+    feedback: Union[str, None] = None
     # msg: str
 
 @dataclasses.dataclass
@@ -25,7 +26,17 @@ class gateway_out_model():
     exception: Union[str, None] = None
     payload: Union[data_payload, None] = None
 
-class gateway_localize_model(BaseModel):
+class base_gateway_model(BaseModel):
+    gateway_eui: str
+    device_eui: str
+
+class gateway_localize_model(base_gateway_model):
     lattitude: float
     longitude: float
     rssi: float
+
+class gateway_rssi_in(base_gateway_model):
+    rssi: int
+
+class gateway_rssi_out(base_gateway_model):
+    distance: float

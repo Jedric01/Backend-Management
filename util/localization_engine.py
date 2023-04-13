@@ -18,19 +18,26 @@ class Localization_Engine():
             self.train_data['distance'] = data['distance']
 
     # convert rssi to distance/radius, by linear interpolating training data
-    def rssi_distance(self, rssi: float, tx_power: int = 10):
-        # get first index, at which rssi from training data is lower than the given rssi value
-        rssi_data = np.array(self.train_data['rssi'])
-        distance = np.array(self.train_data['distance'])
-        idx = np.argmax(rssi_data < rssi)
-        # Generalized De-Moive's linear interpolation 
-        # m = (y_1-y_0)/(x_1 - x_0)
-        slope = (rssi_data[idx] - rssi_data[idx - 1])/(distance[idx] - distance[idx - 1])
-        # (y - y_0) = m * (x - x_0) => x = (y - y_0)/m + x_0, where x is radius
-        radius = (rssi - rssi_data[idx - 1])/slope + distance[idx - 1]
-        print(f'interpolating between {distance[idx - 1]} and {distance[idx]}')
-        print('radius:', radius)
-        return radius/1000
+    # def rssi_distance(self, rssi: float, tx_power: int = 10):
+    #     # get first index, at which rssi from training data is lower than the given rssi value
+    #     rssi_data = np.array(self.train_data['rssi'])
+    #     distance = np.array(self.train_data['distance'])
+    #     idx = np.argmax(rssi_data < rssi)
+    #     # Generalized De-Moive's linear interpolation 
+    #     # m = (y_1-y_0)/(x_1 - x_0)
+    #     slope = (rssi_data[idx] - rssi_data[idx - 1])/(distance[idx] - distance[idx - 1])
+    #     # (y - y_0) = m * (x - x_0) => x = (y - y_0)/m + x_0, where x is radius
+    #     radius = (rssi - rssi_data[idx - 1])/slope + distance[idx - 1]
+    #     print(f'interpolating between {distance[idx - 1]} and {distance[idx]}')
+    #     print('radius:', radius)
+    #     return radius/1000
+
+    # -30rssi @ 1m
+    n = [1.96, 2.829, 2.79]
+    A = [-29, -25, -20]
+    def rssi_to_distance(self, rssi, i = 0):
+        dist = 10 ** ((self.A[i] - rssi) / (10 * self.n[i]))
+        return dist
     
 
     def localize(self, gateways: List[gateway_localize_model]):
